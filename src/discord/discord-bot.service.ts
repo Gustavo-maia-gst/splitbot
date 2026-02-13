@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { ConfigService } from '@config/config.service';
-import { LlmService } from '../llm/llm.service';
+import { DiscordMessageHandler } from './discord-message.handler';
 
 @Injectable()
 export class DiscordBotService implements OnModuleInit {
@@ -10,7 +10,7 @@ export class DiscordBotService implements OnModuleInit {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly llmService: LlmService,
+    private readonly messageHandler: DiscordMessageHandler,
   ) {
     this.client = new Client({
       intents: [
@@ -64,69 +64,8 @@ export class DiscordBotService implements OnModuleInit {
   }
 
   private async handleMessage(message: Message) {
-    // Ignore messages from bots
-    if (message.author.bot) return;
-
-    // Check if bot was mentioned
-    const botMentioned = message.mentions.has(this.client.user!.id);
-
-    if (botMentioned || message.content.toLowerCase().includes('splitc')) {
-      this.logger.log(
-        `📨 Received message from ${message.author.tag} in #${message.channel.isDMBased() ? 'DM' : (message.channel as any).name}`,
-      );
-      this.logger.log(`   Content: ${message.content}`);
-
-      try {
-        // Fetch channel messages
-        const messages = await message.channel.messages.fetch({ limit: 100 });
-
-        // Filter messages from the last 3 hours
-        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-        const recentMessages = messages.filter(
-          (msg) => msg.createdAt > threeHoursAgo && !msg.author.bot,
-        );
-
-        // Sort messages chronologically
-        const sortedMessages = Array.from(recentMessages.values())
-          .reverse()
-          .map((msg) => ({
-            role: 'user',
-            content: `${msg.author.username}: ${msg.content}`,
-          }));
-
-        // Add the current message if not already included (it should be in fetch results, but just to be sure context is clear)
-        // actually fetch usually includes the current message.
-
-        this.logger.log(
-          `🤖 Generating LLM response with ${sortedMessages.length} context messages`,
-        );
-
-        // Start typing indicator
-        const sendTyping = async () => {
-          if ('sendTyping' in message.channel && typeof message.channel.sendTyping === 'function') {
-            try {
-              await message.channel.sendTyping();
-            } catch (err) {
-              this.logger.error('Failed to send typing indicator', err);
-            }
-          }
-        };
-
-        await sendTyping();
-        const typingInterval = setInterval(sendTyping, 5000);
-
-        try {
-          const response = await this.llmService.generateResponse(sortedMessages);
-          clearInterval(typingInterval);
-          await message.reply(response);
-        } catch (error) {
-          clearInterval(typingInterval);
-          throw error;
-        }
-      } catch (error) {
-        this.logger.error('Failed to process message with LLM', error);
-        await message.reply('Desculpe, tive um erro ao tentar processar sua mensagem.');
-      }
+    if (this.client.user) {
+      await this.messageHandler.handleMessage(message, this.client.user);
     }
   }
 

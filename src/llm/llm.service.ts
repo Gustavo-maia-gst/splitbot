@@ -22,7 +22,7 @@ export class LlmService {
       }
 
       const tools = await this.mcpService.getTools();
-      const { response, content } = await generateText({
+      const { text, response, content } = await generateText({
         model: openai('gpt-4o'),
         messages: [
           {
@@ -35,8 +35,7 @@ export class LlmService {
             Quando usar uma ferramenta:
             1. Aguarde o resultado.
             2. Interprete os dados.
-            3. Gere uma resposta FINAL em linguagem natural para o usuário.
-            Nunca retorne apenas chamadas de ferramenta.
+            3. Gere uma resposta em linguagem natural 
             `,
           },
           ...messages,
@@ -44,17 +43,17 @@ export class LlmService {
         tools,
       });
 
+      this.logger.debug(`LLM Response Text: ${text}`);
       console.log(JSON.stringify(content));
 
-      let text = '';
+      let te = '';
       for (const message of response.messages) {
         if (message.role === 'assistant') {
-          text += JSON.stringify(message.content);
+          te += JSON.stringify(message.content);
         }
       }
 
-      this.logger.debug(`LLM Response Text: ${text}`);
-      return text;
+      return te;
     } catch (error) {
       this.logger.error('Failed to generate LLM response', error);
       return 'Desculpe, tive um problema ao tentar processar sua solicitação.';

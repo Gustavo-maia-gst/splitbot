@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@config/config.service';
-import { generateText } from 'ai';
+import { generateText, stepCountIs } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { McpService } from '../mcp/mcp.service';
 
@@ -30,53 +30,16 @@ Quando usar uma ferramenta:
         ...messages,
       ];
 
-      let steps = 0;
-      const MAX_STEPS = 5;
+      const { text, response } = await generateText({
+        model: openai('gpt-5.2-chat-latest'),
+        messages: conversation,
+        stopWhen: stepCountIs(5),
+        tools,
+      });
 
-      while (steps < MAX_STEPS) {
-        JSON.stringify('i: ' + steps, conversation);
+      console.log(response.messages);
 
-        const result = await generateText({
-          model: openai('gpt-5.2-chat-latest'),
-          messages: conversation,
-          tools,
-        });
-
-        const { text, response } = result;
-        if (text) return text;
-
-        const toolCalls = response.messages.filter((m) => m.role === 'tool');
-
-        if (!toolCalls.length) {
-          return text || 'Sem resposta.';
-        }
-
-        // executa tools
-        for (const call of toolCalls) {
-          let resp = '';
-          for (const r of call.content) {
-            if (r.type !== 'tool-result') continue;
-
-            if (r.output.type === 'text') {
-              resp += r.output.value;
-              continue;
-            }
-
-            if (r.output.type === 'json') {
-              resp += (r.output.value as any)?.content?.[0]?.text;
-            }
-          }
-
-          conversation.push({
-            role: 'tool',
-            content: resp,
-          });
-        }
-
-        steps++;
-      }
-
-      return 'Não consegui concluir após várias tentativas.';
+      return text;
     } catch (err) {
       this.logger.error('LLM error', err);
       return 'Erro ao gerar resposta.';

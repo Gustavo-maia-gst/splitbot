@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@config/config.service';
-import { generateText, StepResult } from 'ai';
+import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { McpService } from '../mcp/mcp.service';
 
@@ -58,7 +58,10 @@ Quando usar uma ferramenta:
 
         // se não teve tool call, acabou
         const toolCalls = response.messages.filter(
-          (m) => m.role === 'assistant' && m.content?.some?.((c: any) => c.type === 'tool-call'),
+          (m) =>
+            m.role === 'assistant' &&
+            Array.isArray(m.content) &&
+            m.content.some((c) => c.type === 'tool-call'),
         );
 
         if (!toolCalls.length) {
@@ -68,15 +71,23 @@ Quando usar uma ferramenta:
 
         // executa tools chamadas
         for (const msg of toolCalls) {
-          for (const part of msg.content) {
-            if (part.type === 'tool-call') {
-              const toolResult = await this.mcpService.executeTool(part.toolName, part.args);
+          if (Array.isArray(msg.content)) {
+            for (const part of msg.content) {
+              if (part.type === 'tool-call') {
+                const toolResult = await this.mcpService.executeTool(part.toolName, part.input);
 
-              conversation.push({
-                role: 'tool',
-                toolName: part.toolName,
-                content: JSON.stringify(toolResult),
-              });
+                conversation.push({
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolCallId: part.toolCallId,
+                      toolName: part.toolName,
+                      result: toolResult,
+                    },
+                  ],
+                });
+              }
             }
           }
         }

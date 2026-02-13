@@ -22,38 +22,69 @@ export class LlmService {
       }
 
       const tools = await this.mcpService.getTools();
-      const { text, response, content } = await generateText({
-        model: openai('gpt-5.2-chat-latest'),
-        messages: [
-          {
-            role: 'system',
-            content: `Você é um bot do Discord inteligente e útil chamado SplitBot.
-            Você ajuda usuários respondendo perguntas com base no contexto das mensagens recentes do canal.
-            Seja conciso, direto e amigável.
-            Se a resposta não estiver no contexto, use seu conhecimento geral para ajudar, mas mencione que não encontrou a informação no histórico recente se for algo específico do contexto local.
-            Você em acesso a ferramentas via MCP (Model Context Protocol).
-            Quando usar uma ferramenta:
-            1. Aguarde o resultado.
-            2. Interprete os dados.
-            3. Gere uma resposta em linguagem natural, em portugues, em tom descontraído
-            `,
-          },
-          ...messages,
-        ],
-        tools,
-      });
 
-      this.logger.debug(`LLM Response Text: ${text}`);
-      console.log(JSON.stringify(content));
+      const conversation = [
+        {
+          role: 'system',
+          content: `Você é um bot do Discord inteligente e útil chamado SplitBot.
+Você ajuda usuários respondendo perguntas com base no contexto das mensagens recentes do canal.
+Seja conciso, direto e amigável.
+Você tem acesso a ferramentas via MCP (Model Context Protocol).
+Quando usar uma ferramenta:
+1. Aguarde o resultado.
+2. Interprete os dados.
+3. Gere uma resposta em linguagem natural, em português, em tom descontraído.`,
+        },
+        ...messages,
+      ];
 
-      let te = '';
-      for (const message of response.messages) {
-        if (message.role === 'assistant') {
-          te += JSON.stringify(message.content);
+      let finalText = '';
+      let steps = 0;
+      const MAX_STEPS = 5;
+
+      while (steps < MAX_STEPS) {
+        const result = await generateText({
+          model: openai('gpt-5.2-chat-latest'),
+          messages: conversation,
+          tools,
+        });
+
+        const { text, response } = result;
+
+        // adiciona mensagens do assistant
+        for (const msg of response.messages) {
+          conversation.push(msg);
         }
+
+        // se não teve tool call, acabou
+        const toolCalls = response.messages.filter(
+          (m) => m.role === 'assistant' && m.content?.some?.((c: any) => c.type === 'tool-call'),
+        );
+
+        if (!toolCalls.length) {
+          finalText += text ?? '';
+          break;
+        }
+
+        // executa tools chamadas
+        for (const msg of toolCalls) {
+          for (const part of msg.content) {
+            if (part.type === 'tool-call') {
+              const toolResult = await this.mcpService.executeTool(part.toolName, part.args);
+
+              conversation.push({
+                role: 'tool',
+                toolName: part.toolName,
+                content: JSON.stringify(toolResult),
+              });
+            }
+          }
+        }
+
+        steps++;
       }
 
-      return te;
+      return finalText || 'Não consegui gerar uma resposta.';
     } catch (error) {
       this.logger.error('Failed to generate LLM response', error);
       return 'Desculpe, tive um problema ao tentar processar sua solicitação.';

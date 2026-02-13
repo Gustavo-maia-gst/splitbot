@@ -31,6 +31,28 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
     await this.disconnectFromServers();
   }
 
+  async executeTool(toolName: string, args: any): Promise<any> {
+    const [serverName, mcpToolName] = toolName.split('_', 2);
+
+    const client = this.clients.get(serverName);
+    if (!client) {
+      throw new Error(`MCP server not found: ${serverName}`);
+    }
+
+    this.logger.debug(
+      `Executing MCP tool ${serverName}.${mcpToolName} with args: ${JSON.stringify(args)}`,
+    );
+
+    const result = await client.callTool({
+      name: mcpToolName,
+      arguments: args,
+    });
+
+    this.logger.debug(`MCP tool ${serverName}.${mcpToolName} result: ${JSON.stringify(result)}`);
+
+    return result;
+  }
+
   private async connectToServers() {
     try {
       const configPath = join(process.cwd(), 'mcp-config.json');

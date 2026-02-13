@@ -36,11 +36,14 @@ export class LlmService {
           ...messages,
         ],
         tools,
+        // @ts-expect-error maxSteps is not present in the type definition
+        maxSteps: 5, // Required for multi-step tool execution
         onStepFinish: (step: any) => {
-          this.logger.debug(`Step finished: ${step}`);
+          this.logger.debug(`Step finished: ${JSON.stringify(step, null, 2)}`);
         },
       });
 
+      this.logger.debug(`LLM Response Text: ${text}`);
       return text;
     } catch (error) {
       this.logger.error('Failed to generate LLM response', error);

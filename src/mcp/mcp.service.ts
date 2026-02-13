@@ -111,10 +111,18 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
             description: mcpTool.description,
             inputSchema: jsonSchemaToZod(mcpTool.inputSchema),
             execute: async (args) => {
-              return client.callTool({
-                name: mcpTool.name,
-                arguments: args,
-              });
+              this.logger.debug(`Executing tool ${toolName} with args: ${JSON.stringify(args)}`);
+              try {
+                const result = await client.callTool({
+                  name: mcpTool.name,
+                  arguments: args,
+                });
+                this.logger.debug(`Tool ${toolName} execution result: ${JSON.stringify(result)}`);
+                return result;
+              } catch (error) {
+                this.logger.error(`Error executing tool ${toolName}`, error);
+                throw error;
+              }
             },
           });
         }

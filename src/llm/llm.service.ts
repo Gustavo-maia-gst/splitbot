@@ -17,28 +17,26 @@ export class LlmService {
     try {
       const apiKey = this.configService.openai.apiKey;
       if (!apiKey) {
-        this.logger.warn('OPENAI_API_KEY not configured.');
         return 'Desculpe, não estou configurado para responder perguntas no momento.';
       }
 
       const tools = await this.mcpService.getTools();
 
-      const conversation = [
+      const conversation: any[] = [
         {
           role: 'system',
           content: `Você é um bot do Discord inteligente e útil chamado SplitBot.
 Você ajuda usuários respondendo perguntas com base no contexto das mensagens recentes do canal.
 Seja conciso, direto e amigável.
-Você tem acesso a ferramentas via MCP (Model Context Protocol), só chame as tools que estão EXPLICITAMENTE LISTADAS, quaisquer outras chamadas irão resultar em erros TRÁGICOS
+Você tem acesso a ferramentas via MCP (Model Context Protocol).
 Quando usar uma ferramenta:
 1. Aguarde o resultado.
 2. Interprete os dados.
-3. Gere uma resposta em linguagem natural, em português, em tom descontraído.`,
+3. Gere uma resposta em português, em tom descontraído.`,
         },
         ...messages,
       ];
 
-      let finalText = '';
       let steps = 0;
       const MAX_STEPS = 5;
 
@@ -49,53 +47,49 @@ Quando usar uma ferramenta:
           tools,
         });
 
-        const { text, response } = result;
+        const { response, text } = result;
 
         // adiciona mensagens do assistant
         for (const msg of response.messages) {
           conversation.push(msg);
         }
 
-        // se não teve tool call, acabou
-        const toolCalls = response.messages.filter(
-          (m) =>
-            m.role === 'assistant' &&
-            Array.isArray(m.content) &&
-            m.content.some((c) => c.type === 'tool-call'),
+        // coleta tool calls
+        const toolCalls = response.messages.flatMap((m) =>
+          m.role === 'assistant' && Array.isArray(m.content)
+            ? m.content.filter((c) => c.type === 'tool-call')
+            : [],
         );
 
-        if (!toolCalls.length) {
-          finalText += text ?? '';
-          break;
+        // se não tem tool call → resposta final
+        if (toolCalls.length === 0) {
+          return text ?? 'Não consegui gerar resposta.';
         }
 
-        // executa tools chamadas
-        for (const msg of toolCalls) {
-          if (Array.isArray(msg.content)) {
-            for (const part of msg.content) {
-              if (part.type === 'tool-call') {
-                const toolResult = await this.mcpService.executeTool(part.toolName, part.input);
+        // executa cada tool
+        for (const call of toolCalls) {
+          const toolResult = await this.mcpService.executeTool(call.toolName, call.input);
 
-                conversation.push({
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolCallId: part.toolCallId,
-                      toolName: part.toolName,
-                      result: toolResult,
-                    },
-                  ],
-                });
-              }
-            }
-          }
+          conversation.push({
+            role: 'tool',
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: call.toolCallId,
+                toolName: call.toolName,
+                output: {
+                  type: 'text',
+                  text: JSON.stringify(toolResult),
+                },
+              },
+            ],
+          });
         }
 
         steps++;
       }
 
-      return finalText || 'Não consegui gerar uma resposta.';
+      return 'Não consegui concluir a resposta após várias tentativas.';
     } catch (error) {
       this.logger.error('Failed to generate LLM response', error);
       return 'Desculpe, tive um problema ao tentar processar sua solicitação.';

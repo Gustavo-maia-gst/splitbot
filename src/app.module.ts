@@ -7,8 +7,10 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 import { LlmModule } from './llm/llm.module';
 
+import { CommonModule } from './common/common.module';
+
 @Module({
-  imports: [ConfigModule, DiscordModule, LlmModule],
+  imports: [ConfigModule, DiscordModule, LlmModule, CommonModule],
   providers: [
     {
       provide: APP_FILTER,

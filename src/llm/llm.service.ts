@@ -43,22 +43,7 @@ Quando usar uma ferramenta:
         const { text, response } = result;
         if (text) return text;
 
-        const assistantMessage = response.messages.at(-1);
-
-        if (!assistantMessage) {
-          return text || 'Sem resposta.';
-        }
-
-        // adiciona SOMENTE a última mensagem do assistant
-        conversation.push(assistantMessage);
-
-        console.log(JSON.stringify(response.messages));
-
-        // verifica se tem tool call
-        const toolCalls =
-          assistantMessage.role === 'assistant' && Array.isArray(assistantMessage.content)
-            ? assistantMessage.content.filter((c) => c.type === 'tool-call')
-            : [];
+        const toolCalls = response.messages.filter((m) => m.role === 'tool');
 
         if (!toolCalls.length) {
           return text || 'Sem resposta.';
@@ -66,21 +51,23 @@ Quando usar uma ferramenta:
 
         // executa tools
         for (const call of toolCalls) {
-          const toolResult = await this.mcpService.executeTool(call.toolName, call.input);
+          let resp = '';
+          for (const r of call.content) {
+            if (r.type !== 'tool-result') continue;
+
+            if (r.output.type === 'text') {
+              resp += r.output.value;
+              continue;
+            }
+
+            if (r.output.type === 'json') {
+              resp += (r.output.value as any)?.content?.[0]?.text;
+            }
+          }
 
           conversation.push({
             role: 'tool',
-            content: [
-              {
-                type: 'tool-result',
-                toolCallId: call.toolCallId,
-                toolName: call.toolName,
-                output: {
-                  type: 'text',
-                  text: JSON.stringify(toolResult),
-                },
-              },
-            ],
+            content: resp,
           });
         }
 

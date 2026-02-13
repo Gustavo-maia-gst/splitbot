@@ -15,7 +15,6 @@ jest.mock('@ai-sdk/openai', () => ({
 
 describe('LlmService', () => {
   let service: LlmService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -34,7 +33,6 @@ describe('LlmService', () => {
     }).compile();
 
     service = module.get<LlmService>(LlmService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

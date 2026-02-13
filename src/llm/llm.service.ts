@@ -30,14 +30,12 @@ Quando usar uma ferramenta:
         ...messages,
       ];
 
-      const { text, response } = await generateText({
-        model: openai('gpt-5.2-chat-latest'),
+      const { text } = await generateText({
+        model: openai('gpt-5.1-codex-max'),
         messages: conversation,
         stopWhen: stepCountIs(5),
         tools,
       });
-
-      console.log(response.messages);
 
       return text;
     } catch (err) {

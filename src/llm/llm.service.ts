@@ -23,7 +23,7 @@ export class LlmService {
 
       const tools = await this.mcpService.getTools();
       const { text, response, content } = await generateText({
-        model: openai('gpt-4o'),
+        model: openai('gpt-5.2-chat-latest'),
         messages: [
           {
             role: 'system',
@@ -35,7 +35,7 @@ export class LlmService {
             Quando usar uma ferramenta:
             1. Aguarde o resultado.
             2. Interprete os dados.
-            3. Gere uma resposta em linguagem natural 
+            3. Gere uma resposta em linguagem natural, em portugues, em tom descontraído
             `,
           },
           ...messages,

@@ -32,7 +32,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async executeTool(toolName: string, args: any): Promise<any> {
-    const [serverName, mcpToolName] = toolName.split('_', 2);
+    const [serverName, mcpToolName] = toolName.split('___', 2);
 
     const client = this.clients.get(serverName);
     if (!client) {
@@ -40,7 +40,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
     }
 
     this.logger.debug(
-      `Executing MCP tool ${serverName}.${mcpToolName} with args: ${JSON.stringify(args)}`,
+      `Executing MCP tool ${serverName}___${mcpToolName} with args: ${JSON.stringify(args)}`,
     );
 
     const result = await client.callTool({
@@ -48,7 +48,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
       arguments: args,
     });
 
-    this.logger.debug(`MCP tool ${serverName}.${mcpToolName} result: ${JSON.stringify(result)}`);
+    this.logger.debug(`MCP tool ${serverName}___${mcpToolName} result: ${JSON.stringify(result)}`);
 
     return result;
   }
@@ -127,7 +127,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
             continue;
           }
 
-          const toolName = `${serverName}.${mcpTool.name}`;
+          const toolName = `${serverName}___${mcpTool.name}`;
 
           allTools[toolName] = tool<any, any>({
             description: mcpTool.description,

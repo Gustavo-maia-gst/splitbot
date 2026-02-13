@@ -7,10 +7,12 @@ import { ConfigModule } from '@config/config.module';
 
 import { LlmModule } from '../llm/llm.module';
 
+import { DiscordMessageHandler } from './discord-message.handler';
+
 @Module({
   imports: [ConfigModule, LlmModule],
   controllers: [DiscordController],
-  providers: [DiscordService, DiscordBotService],
+  providers: [DiscordService, DiscordBotService, DiscordMessageHandler],
   exports: [DiscordService, DiscordBotService],
 })
 export class DiscordModule implements NestModule {

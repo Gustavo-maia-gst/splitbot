@@ -41,11 +41,12 @@ Quando usar uma ferramenta:
         });
 
         const { text, response } = result;
+        if (text) return text;
 
         const assistantMessage = response.messages.at(-1);
 
         if (!assistantMessage) {
-          return text ?? 'Sem resposta.';
+          return text || 'Sem resposta.';
         }
 
         // adiciona SOMENTE a última mensagem do assistant
@@ -58,7 +59,7 @@ Quando usar uma ferramenta:
             : [];
 
         if (!toolCalls.length) {
-          return text ?? 'Sem resposta.';
+          return text || 'Sem resposta.';
         }
 
         // executa tools

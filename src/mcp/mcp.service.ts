@@ -127,7 +127,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
             continue;
           }
 
-          const toolName = `${serverName}_${mcpTool.name}`;
+          const toolName = `${serverName}.${mcpTool.name}`;
 
           allTools[toolName] = tool<any, any>({
             description: mcpTool.description,

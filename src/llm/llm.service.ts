@@ -22,7 +22,7 @@ export class LlmService {
       }
 
       const tools = await this.mcpService.getTools();
-      const { text } = await generateText({
+      const { response } = await generateText({
         model: openai('gpt-4o'),
         messages: [
           {
@@ -42,6 +42,8 @@ export class LlmService {
           this.logger.debug(`Step finished: ${JSON.stringify(step, null, 2)}`);
         },
       });
+
+      const text = response.messages.join('\n');
 
       this.logger.debug(`LLM Response Text: ${text}`);
       return text;

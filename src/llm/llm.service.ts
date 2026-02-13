@@ -15,24 +15,17 @@ export class LlmService {
 
   async generateResponse(messages: any[]): Promise<string> {
     try {
-      const apiKey = this.configService.openai.apiKey;
-      if (!apiKey) {
-        return 'Desculpe, não estou configurado para responder perguntas no momento.';
-      }
-
       const tools = await this.mcpService.getTools();
 
       const conversation: any[] = [
         {
           role: 'system',
-          content: `Você é um bot do Discord inteligente e útil chamado SplitBot.
-Você ajuda usuários respondendo perguntas com base no contexto das mensagens recentes do canal.
-Seja conciso, direto e amigável.
-Você tem acesso a ferramentas via MCP (Model Context Protocol).
+          content: `Você é um bot do Discord chamado SplitBot.
+Você pode usar ferramentas MCP.
 Quando usar uma ferramenta:
 1. Aguarde o resultado.
 2. Interprete os dados.
-3. Gere uma resposta em português, em tom descontraído.`,
+3. Gere resposta em português.`,
         },
         ...messages,
       ];
@@ -47,26 +40,28 @@ Quando usar uma ferramenta:
           tools,
         });
 
-        const { response, text } = result;
+        const { text, response } = result;
 
-        // adiciona mensagens do assistant
-        for (const msg of response.messages) {
-          conversation.push(msg);
+        const assistantMessage = response.messages.at(-1);
+
+        if (!assistantMessage) {
+          return text ?? 'Sem resposta.';
         }
 
-        // coleta tool calls
-        const toolCalls = response.messages.flatMap((m) =>
-          m.role === 'assistant' && Array.isArray(m.content)
-            ? m.content.filter((c) => c.type === 'tool-call')
-            : [],
-        );
+        // adiciona SOMENTE a última mensagem do assistant
+        conversation.push(assistantMessage);
 
-        // se não tem tool call → resposta final
-        if (toolCalls.length === 0) {
-          return text ?? 'Não consegui gerar resposta.';
+        // verifica se tem tool call
+        const toolCalls =
+          assistantMessage.role === 'assistant' && Array.isArray(assistantMessage.content)
+            ? assistantMessage.content.filter((c) => c.type === 'tool-call')
+            : [];
+
+        if (!toolCalls.length) {
+          return text ?? 'Sem resposta.';
         }
 
-        // executa cada tool
+        // executa tools
         for (const call of toolCalls) {
           const toolResult = await this.mcpService.executeTool(call.toolName, call.input);
 
@@ -89,10 +84,10 @@ Quando usar uma ferramenta:
         steps++;
       }
 
-      return 'Não consegui concluir a resposta após várias tentativas.';
-    } catch (error) {
-      this.logger.error('Failed to generate LLM response', error);
-      return 'Desculpe, tive um problema ao tentar processar sua solicitação.';
+      return 'Não consegui concluir após várias tentativas.';
+    } catch (err) {
+      this.logger.error('LLM error', err);
+      return 'Erro ao gerar resposta.';
     }
   }
 }

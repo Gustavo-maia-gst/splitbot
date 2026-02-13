@@ -52,6 +52,8 @@ Quando usar uma ferramenta:
         // adiciona SOMENTE a última mensagem do assistant
         conversation.push(assistantMessage);
 
+        console.log(JSON.stringify(response.messages));
+
         // verifica se tem tool call
         const toolCalls =
           assistantMessage.role === 'assistant' && Array.isArray(assistantMessage.content)

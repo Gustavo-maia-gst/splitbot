@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@config/config.service';
-import { generateText } from 'ai';
+import { generateText, StepResult } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { McpService } from '../mcp/mcp.service';
 
@@ -38,12 +38,17 @@ export class LlmService {
         tools,
         // @ts-expect-error maxSteps is not present in the type definition
         maxSteps: 5, // Required for multi-step tool execution
-        onStepFinish: (step: any) => {
-          this.logger.debug(`Step finished: ${JSON.stringify(step, null, 2)}`);
+        onStepFinish: (step: StepResult<any>) => {
+          this.logger.debug(`Step finished: ${step.reasoning.map((r) => r.text).join('\n')}`);
         },
       });
 
-      const text = response.messages.join('\n');
+      let text = '';
+      for (const message of response.messages) {
+        if (message.role === 'assistant') {
+          text += message.content;
+        }
+      }
 
       this.logger.debug(`LLM Response Text: ${text}`);
       return text;

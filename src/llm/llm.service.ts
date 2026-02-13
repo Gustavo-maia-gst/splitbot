@@ -22,7 +22,7 @@ export class LlmService {
       }
 
       const tools = await this.mcpService.getTools();
-      const { response } = await generateText({
+      const { response, content } = await generateText({
         model: openai('gpt-4o'),
         messages: [
           {
@@ -42,12 +42,9 @@ export class LlmService {
           ...messages,
         ],
         tools,
-        // @ts-expect-error maxSteps is not present in the type definition
-        maxSteps: 5, // Required for multi-step tool execution
-        onStepFinish: (step: StepResult<any>) => {
-          this.logger.debug(`Step finished: ${step.reasoning.map((r) => r.text).join('\n')}`);
-        },
       });
+
+      console.log(JSON.stringify(content));
 
       let text = '';
       for (const message of response.messages) {

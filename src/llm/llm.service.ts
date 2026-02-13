@@ -31,7 +31,13 @@ export class LlmService {
             Você ajuda usuários respondendo perguntas com base no contexto das mensagens recentes do canal.
             Seja conciso, direto e amigável.
             Se a resposta não estiver no contexto, use seu conhecimento geral para ajudar, mas mencione que não encontrou a informação no histórico recente se for algo específico do contexto local.
-            Você tem acesso a ferramentas via MCP (Model Context Protocol). Use-as quando necessário para responder perguntas sobre o GitHub, Linear, etc.`,
+            Você em acesso a ferramentas via MCP (Model Context Protocol).
+            Quando usar uma ferramenta:
+            1. Aguarde o resultado.
+            2. Interprete os dados.
+            3. Gere uma resposta FINAL em linguagem natural para o usuário.
+            Nunca retorne apenas chamadas de ferramenta.
+            `,
           },
           ...messages,
         ],

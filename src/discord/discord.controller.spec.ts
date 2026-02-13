@@ -27,7 +27,6 @@ describe('DiscordController', () => {
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
-        forbidNonWhitelisted: true,
         transform: true,
       }),
     );
@@ -239,6 +238,42 @@ describe('DiscordController', () => {
           .post('/discord/interactions')
           .send(invalidPayload)
           .expect(400);
+      });
+
+      it('should accept Discord payloads with extra fields', async () => {
+        const discordPingWithExtras = {
+          type: InteractionType.PING,
+          id: 'test-id',
+          application_id: 'test-app-id',
+          token: 'test-token',
+          version: 1,
+          app_permissions: '562949953601536',
+          attachment_size_limit: 524288000,
+          authorizing_integration_owners: {},
+          entitlements: [],
+          user: {
+            id: '643945264868098049',
+            username: 'discord',
+            discriminator: '0000',
+            global_name: 'Discord',
+            avatar: 'c6a249645d46209f337279cd2ca998c7',
+            bot: true,
+            system: true,
+          },
+        };
+
+        const pongResponse = {
+          type: InteractionResponseType.PONG,
+        };
+
+        jest.spyOn(discordService, 'handleInteraction').mockReturnValue(pongResponse);
+
+        const response = await request(app.getHttpServer())
+          .post('/discord/interactions')
+          .send(discordPingWithExtras)
+          .expect(200);
+
+        expect(response.body).toEqual(pongResponse);
       });
     });
   });

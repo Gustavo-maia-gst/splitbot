@@ -4,15 +4,13 @@ import { DiscordService } from './discord.service';
 import { DiscordBotService } from './discord-bot.service';
 import { VerifySignatureMiddleware } from './middleware/verify-signature.middleware';
 import { ConfigModule } from '@config/config.module';
-
 import { LlmModule } from '../llm/llm.module';
-
 import { DiscordMessageHandler } from './discord-message.handler';
 
 @Module({
   imports: [ConfigModule, LlmModule],
   controllers: [DiscordController],
-  providers: [DiscordService, DiscordBotService, DiscordMessageHandler],
+  providers: [DiscordService, DiscordMessageHandler, DiscordBotService],
   exports: [DiscordService, DiscordBotService],
 })
 export class DiscordModule implements NestModule {

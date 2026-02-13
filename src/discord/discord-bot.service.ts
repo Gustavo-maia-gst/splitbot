@@ -101,10 +101,28 @@ export class DiscordBotService implements OnModuleInit {
           `🤖 Generating LLM response with ${sortedMessages.length} context messages`,
         );
 
-        const response = await this.llmService.generateResponse(sortedMessages);
+        // Start typing indicator
+        const sendTyping = async () => {
+          if ('sendTyping' in message.channel && typeof message.channel.sendTyping === 'function') {
+            try {
+              await message.channel.sendTyping();
+            } catch (err) {
+              this.logger.error('Failed to send typing indicator', err);
+            }
+          }
+        };
 
-        // Reply to the message
-        await message.reply(response);
+        await sendTyping();
+        const typingInterval = setInterval(sendTyping, 5000);
+
+        try {
+          const response = await this.llmService.generateResponse(sortedMessages);
+          clearInterval(typingInterval);
+          await message.reply(response);
+        } catch (error) {
+          clearInterval(typingInterval);
+          throw error;
+        }
       } catch (error) {
         this.logger.error('Failed to process message with LLM', error);
         await message.reply('Desculpe, tive um erro ao tentar processar sua mensagem.');

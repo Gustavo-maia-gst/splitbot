@@ -46,7 +46,7 @@ export class LlmService {
       let text = '';
       for (const message of response.messages) {
         if (message.role === 'assistant') {
-          text += message.content;
+          text += JSON.stringify(message.content);
         }
       }
 

@@ -34,6 +34,8 @@ Quando usar uma ferramenta:
       const MAX_STEPS = 5;
 
       while (steps < MAX_STEPS) {
+        JSON.stringify('i: ' + steps, conversation);
+
         const result = await generateText({
           model: openai('gpt-5.2-chat-latest'),
           messages: conversation,

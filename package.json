@@ -20,10 +20,12 @@
     "test:verbose": "jest --verbose"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.28",
     "@nestjs/common": "^10.3.0",
     "@nestjs/core": "^10.3.0",
     "@nestjs/platform-express": "^10.3.0",
     "@types/cookie-parser": "^1.4.10",
+    "ai": "^6.0.85",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
@@ -31,7 +33,8 @@
     "dotenv": "^17.3.1",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
-    "tweetnacl": "^1.0.3"
+    "tweetnacl": "^1.0.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.0",

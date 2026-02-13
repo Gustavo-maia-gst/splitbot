@@ -5,8 +5,10 @@ import { DiscordModule } from './discord/discord.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
+import { LlmModule } from './llm/llm.module';
+
 @Module({
-  imports: [ConfigModule, DiscordModule],
+  imports: [ConfigModule, DiscordModule, LlmModule],
   providers: [
     {
       provide: APP_FILTER,

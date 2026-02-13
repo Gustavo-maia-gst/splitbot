@@ -1,13 +1,17 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { ConfigService } from '@config/config.service';
+import { LlmService } from '../llm/llm.service';
 
 @Injectable()
 export class DiscordBotService implements OnModuleInit {
   private readonly logger = new Logger(DiscordBotService.name);
   private client: Client;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly llmService: LlmService,
+  ) {
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -76,35 +80,34 @@ export class DiscordBotService implements OnModuleInit {
         // Fetch channel messages
         const messages = await message.channel.messages.fetch({ limit: 100 });
 
-        this.logger.log(`\n📜 Channel Message History (${messages.size} messages):`);
-        this.logger.log('='.repeat(80));
+        // Filter messages from the last 3 hours
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const recentMessages = messages.filter(
+          (msg) => msg.createdAt > threeHoursAgo && !msg.author.bot,
+        );
 
-        // Print messages in chronological order (oldest first)
-        const sortedMessages = Array.from(messages.values()).reverse();
+        // Sort messages chronologically
+        const sortedMessages = Array.from(recentMessages.values())
+          .reverse()
+          .map((msg) => ({
+            role: 'user',
+            content: `${msg.author.username}: ${msg.content}`,
+          }));
 
-        sortedMessages.forEach((msg, index) => {
-          const timestamp = msg.createdAt.toISOString();
-          const author = msg.author.tag;
-          const content = msg.content || '[No content - may have embeds/attachments]';
+        // Add the current message if not already included (it should be in fetch results, but just to be sure context is clear)
+        // actually fetch usually includes the current message.
 
-          this.logger.log(`${index + 1}. [${timestamp}] ${author}: ${content}`);
+        this.logger.log(
+          `🤖 Generating LLM response with ${sortedMessages.length} context messages`,
+        );
 
-          if (msg.attachments.size > 0) {
-            msg.attachments.forEach((att) => {
-              this.logger.log(`   📎 Attachment: ${att.name} (${att.url})`);
-            });
-          }
-        });
-
-        this.logger.log('='.repeat(80));
+        const response = await this.llmService.generateResponse(sortedMessages);
 
         // Reply to the message
-        await message.reply(
-          `Olá! Li ${messages.size} mensagens deste canal. Verifique os logs para detalhes.`,
-        );
+        await message.reply(response);
       } catch (error) {
-        this.logger.error('Failed to fetch messages', error);
-        await message.reply('Desculpe, não consegui ler as mensagens do canal.');
+        this.logger.error('Failed to process message with LLM', error);
+        await message.reply('Desculpe, tive um erro ao tentar processar sua mensagem.');
       }
     }
   }

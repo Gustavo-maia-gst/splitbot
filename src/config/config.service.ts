@@ -26,6 +26,12 @@ export class ConfigService {
     };
   }
 
+  get openai() {
+    return {
+      apiKey: process.env.OPENAI_API_KEY,
+    };
+  }
+
   private getRequired(key: string): string {
     const value = process.env[key];
     if (!value) {

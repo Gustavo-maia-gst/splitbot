@@ -4,9 +4,10 @@ import { GoogleService } from './specializations/gcp/google.service';
 import { MCP_TOOL_TOKEN, McpTool } from './specializations/mcp.tool';
 import { TOOLS } from './specializations';
 import { ConfigModule } from '@config/config.module';
+import { CommonModule } from '@/common/common.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, CommonModule],
   providers: [
     McpService,
     GoogleService,

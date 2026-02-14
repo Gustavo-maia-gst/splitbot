@@ -59,6 +59,8 @@ Algumas tools vão ter skills de documentação, por exemplo, a tool gcp_list_lo
 
 Também podem existir skills de workflow ou investigação, por exemplo, pode ter uma skill_investigate_bug que vai fornecer uma lista de passos e informações a serem levantadas em caso de bug, que você deve levantar e trazer todo o contexto para o usuário.
 
+Se for chamar uma tool que tenha uma skill associada, SEMPRE chame a skill primeiro para entender como usar a tool da melhor forma.
+
 ## Sobre as tools
 
 As ferramentas podem ter documentação, seja via uma outra tool de skill como: skill_tool ou uma tool de documentation, use elas sempre que possível.

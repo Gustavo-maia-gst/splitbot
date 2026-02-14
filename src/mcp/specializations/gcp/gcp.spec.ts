@@ -190,7 +190,7 @@ describe('GCP Tools', () => {
 
       expect(mockListInstances).toHaveBeenCalled();
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('instance-1');
+      expect(result?.[0].name).toBe('instance-1');
     });
   });
 

@@ -58,7 +58,7 @@ function allowNullIfDefault(schema: any): any {
 }
 
 export function cleanArgs(obj: any): any {
-  if (obj === null || obj === undefined) return undefined;
+  if (obj === null || obj === undefined || obj === '' || obj === 0) return undefined;
 
   if (Array.isArray(obj)) {
     const arr = obj.map(cleanArgs).filter((v) => v !== undefined);

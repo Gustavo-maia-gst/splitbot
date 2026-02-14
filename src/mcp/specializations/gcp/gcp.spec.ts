@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GoogleService } from './google.service';
-import { ConfigService } from '@config/config.service';
+import { ConfigService } from '../../../config/config.service';
 import { ListLogsTool } from './logs_explorer/list_logs/list-logs.tool';
 import { GetLogContextTool } from './logs_explorer/get_log_context/get-log-context.tool';
 import { ListSqlInstancesTool } from './database_status/list_sql_instances/list-sql-instances.tool';
 import { DetailSqlInstanceTool } from './database_status/detail_sql_instance/detail-sql-instance.tool';
+import { FileService } from '@/common/file.service';
 
 // Mock @google-cloud/logging
 const mockGetEntries = jest.fn();
@@ -56,6 +57,7 @@ describe('GCP Tools', () => {
       providers: [
         GoogleService,
         ListLogsTool,
+        FileService,
         GetLogContextTool,
         ListSqlInstancesTool,
         DetailSqlInstanceTool,
@@ -175,15 +177,17 @@ describe('GCP Tools', () => {
   describe('ListSqlInstancesTool', () => {
     it('should list instances', async () => {
       mockListInstances.mockResolvedValue([
-        [
-          {
-            name: 'instance-1',
-            state: 'RUNNABLE',
-            databaseVersion: 'POSTGRES_13',
-            region: 'us-central1',
-            settings: { tier: 'db-f1-micro' },
-          },
-        ],
+        {
+          items: [
+            {
+              name: 'instance-1',
+              state: 'RUNNABLE',
+              databaseVersion: 'POSTGRES_13',
+              region: 'us-central1',
+              settings: { tier: 'db-f1-micro' },
+            },
+          ],
+        },
       ]);
 
       const result = await listSqlInstancesTool.execute({});
@@ -207,7 +211,7 @@ describe('GCP Tools', () => {
 
       const result = await detailSqlInstanceTool.execute({ instanceId: 'instance-1' });
 
-      expect(mockListTimeSeries).toHaveBeenCalledTimes(3); // CPU, Memory, Connections
+      expect(mockListTimeSeries).toHaveBeenCalledTimes(6); // CPU, Memory, Connections, Disk Util, Read Ops, Write Ops
       expect(result.instanceId).toBe('instance-1');
       expect(result.metrics['database/cpu/utilization']).toBe(0.5);
     });

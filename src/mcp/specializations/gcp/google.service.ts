@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Logging } from '@google-cloud/logging';
 import { SqlInstancesServiceClient } from '@google-cloud/sql';
 import { MetricServiceClient } from '@google-cloud/monitoring';
-import { ConfigService } from '@config/config.service';
+import { ConfigService } from '../../../config/config.service';
 
 @Injectable()
 export class GoogleService implements OnModuleInit {
@@ -173,6 +173,9 @@ export class GoogleService implements OnModuleInit {
       'database/cpu/utilization',
       'database/memory/utilization',
       'database/network/connections',
+      'database/disk/utilization',
+      'database/disk/read_ops_count',
+      'database/disk/write_ops_count',
     ];
 
     const results: Record<string, any> = {};

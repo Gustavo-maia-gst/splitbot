@@ -19,7 +19,7 @@ export class ListSqlInstancesTool extends McpTool<z.infer<typeof ListSqlInstance
   description =
     'Lista as instancias de banco de dados do projeto. Existem duas instancias principais, o banco central que é o comissionamento-staging-v5 e o banco efemero que é o ephemeral-tables';
 
-  getSchema(): ZodSchema<any> {
+  getSchema(): ZodSchema<z.infer<typeof ListSqlInstancesSchema>> {
     return ListSqlInstancesSchema;
   }
 

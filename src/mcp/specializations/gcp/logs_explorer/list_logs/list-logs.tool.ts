@@ -35,7 +35,7 @@ export class ListLogsTool extends McpTool<z.infer<typeof ListLogsSchema>> {
     super();
   }
 
-  getSchema(): ZodSchema<any> {
+  getSchema(): ZodSchema<z.infer<typeof ListLogsSchema>> {
     return ListLogsSchema;
   }
 

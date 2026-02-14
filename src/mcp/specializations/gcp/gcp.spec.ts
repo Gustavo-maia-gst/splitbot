@@ -3,6 +3,8 @@ import { GoogleService } from './google.service';
 import { ConfigService } from '@config/config.service';
 import { ListLogsTool } from './logs_explorer/list_logs/list-logs.tool';
 import { GetLogContextTool } from './logs_explorer/get_log_context/get-log-context.tool';
+import { ListSqlInstancesTool } from './database_status/list_sql_instances/list-sql-instances.tool';
+import { DetailSqlInstanceTool } from './database_status/detail_sql_instance/detail-sql-instance.tool';
 
 // Mock @google-cloud/logging
 const mockGetEntries = jest.fn();
@@ -16,10 +18,38 @@ jest.mock('@google-cloud/logging', () => {
   };
 });
 
-describe('GCP Logs Tools', () => {
+// Mock @google-cloud/sql
+const mockListInstances = jest.fn();
+jest.mock('@google-cloud/sql', () => {
+  return {
+    SqlInstancesServiceClient: jest.fn().mockImplementation(() => {
+      return {
+        list: mockListInstances,
+        getProjectId: jest.fn().mockResolvedValue('test-project'),
+      };
+    }),
+  };
+});
+
+// Mock @google-cloud/monitoring
+const mockListTimeSeries = jest.fn();
+jest.mock('@google-cloud/monitoring', () => {
+  return {
+    MetricServiceClient: jest.fn().mockImplementation(() => {
+      return {
+        listTimeSeries: mockListTimeSeries,
+        getProjectId: jest.fn().mockResolvedValue('test-project'),
+      };
+    }),
+  };
+});
+
+describe('GCP Tools', () => {
   let googleService: GoogleService;
   let listLogsTool: ListLogsTool;
   let getLogContextTool: GetLogContextTool;
+  let listSqlInstancesTool: ListSqlInstancesTool;
+  let detailSqlInstanceTool: DetailSqlInstanceTool;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,6 +57,8 @@ describe('GCP Logs Tools', () => {
         GoogleService,
         ListLogsTool,
         GetLogContextTool,
+        ListSqlInstancesTool,
+        DetailSqlInstanceTool,
         {
           provide: ConfigService,
           useValue: {
@@ -46,8 +78,10 @@ describe('GCP Logs Tools', () => {
     googleService = module.get<GoogleService>(GoogleService);
     listLogsTool = module.get<ListLogsTool>(ListLogsTool);
     getLogContextTool = module.get<GetLogContextTool>(GetLogContextTool);
+    listSqlInstancesTool = module.get<ListSqlInstancesTool>(ListSqlInstancesTool);
+    detailSqlInstanceTool = module.get<DetailSqlInstanceTool>(DetailSqlInstanceTool);
 
-    // Manually trigger onModuleInit to init the mock client
+    // Manually trigger onModuleInit to init the mock clients
     googleService.onModuleInit();
   });
 
@@ -60,7 +94,7 @@ describe('GCP Logs Tools', () => {
       expect(googleService).toBeDefined();
     });
 
-    it('should initialize logging client', () => {
+    it('should initialize clients', () => {
       expect(googleService.getLoggingClient()).toBeDefined();
     });
   });
@@ -135,6 +169,47 @@ describe('GCP Logs Tools', () => {
       mockGetEntries.mockResolvedValue([[]]); // empty array
       const result = await getLogContextTool.execute({ insertId: 'missing' });
       expect(result).toEqual({ message: 'Log not found' });
+    });
+  });
+
+  describe('ListSqlInstancesTool', () => {
+    it('should list instances', async () => {
+      mockListInstances.mockResolvedValue([
+        [
+          {
+            name: 'instance-1',
+            state: 'RUNNABLE',
+            databaseVersion: 'POSTGRES_13',
+            region: 'us-central1',
+            settings: { tier: 'db-f1-micro' },
+          },
+        ],
+      ]);
+
+      const result = await listSqlInstancesTool.execute({});
+
+      expect(mockListInstances).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('instance-1');
+    });
+  });
+
+  describe('DetailSqlInstanceTool', () => {
+    it('should return metrics for instance', async () => {
+      // Mock monitoring response for a metric
+      mockListTimeSeries.mockResolvedValue([
+        [
+          {
+            points: [{ value: { doubleValue: 0.5 } }],
+          },
+        ],
+      ]);
+
+      const result = await detailSqlInstanceTool.execute({ instanceId: 'instance-1' });
+
+      expect(mockListTimeSeries).toHaveBeenCalledTimes(3); // CPU, Memory, Connections
+      expect(result.instanceId).toBe('instance-1');
+      expect(result.metrics['database/cpu/utilization']).toBe(0.5);
     });
   });
 });

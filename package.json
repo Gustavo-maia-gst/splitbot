@@ -22,6 +22,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.28",
     "@google-cloud/logging": "^11.2.1",
+    "@google-cloud/monitoring": "^5.3.1",
+    "@google-cloud/sql": "^0.24.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@nestjs/common": "^10.3.0",
     "@nestjs/core": "^10.3.0",

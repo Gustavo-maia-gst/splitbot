@@ -26,7 +26,7 @@ export class FileService {
   }
 
   async loadSkill(name: string): Promise<string> {
-    const path = `src/mcp/skills/${name}/SKILL.md`;
+    const path = `src/mcp/specializations/${name}/SKILL.md`;
     try {
       return await this.loadTextFile(path);
     } catch {

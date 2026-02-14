@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z, ZodSchema } from 'zod';
-import { McpTool } from '../../mcp.tool';
-import { GoogleService } from '../google.service';
+import { McpTool } from '../../../mcp.tool';
+import { GoogleService } from '../../google.service';
 
 const GetLogContextSchema = z.object({
   insertId: z.string().describe('The insertId of the log entry'),
@@ -13,12 +13,14 @@ const GetLogContextSchema = z.object({
 });
 
 @Injectable()
-export class GetLogContextTool implements McpTool<z.infer<typeof GetLogContextSchema>> {
+export class GetLogContextTool extends McpTool<z.infer<typeof GetLogContextSchema>> {
   name = 'gcp_get_log_context';
   description = 'Get the full context/entry of a specific log by insertId.';
   private readonly logger = new Logger(GetLogContextTool.name);
 
-  constructor(private readonly googleService: GoogleService) {}
+  constructor(private readonly googleService: GoogleService) {
+    super();
+  }
 
   getSchema(): ZodSchema<any> {
     return GetLogContextSchema;

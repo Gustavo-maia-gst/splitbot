@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GoogleService } from './google.service';
 import { ConfigService } from '@config/config.service';
-import { ListLogsTool } from './logs_explorer/list-logs.tool';
-import { GetLogContextTool } from './logs_explorer/get-log-context.tool';
+import { ListLogsTool } from './logs_explorer/list_logs/list-logs.tool';
+import { GetLogContextTool } from './logs_explorer/get_log_context/get-log-context.tool';
 
 // Mock @google-cloud/logging
 const mockGetEntries = jest.fn();
@@ -20,7 +20,6 @@ describe('GCP Logs Tools', () => {
   let googleService: GoogleService;
   let listLogsTool: ListLogsTool;
   let getLogContextTool: GetLogContextTool;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -47,7 +46,6 @@ describe('GCP Logs Tools', () => {
     googleService = module.get<GoogleService>(GoogleService);
     listLogsTool = module.get<ListLogsTool>(ListLogsTool);
     getLogContextTool = module.get<GetLogContextTool>(GetLogContextTool);
-    configService = module.get<ConfigService>(ConfigService);
 
     // Manually trigger onModuleInit to init the mock client
     googleService.onModuleInit();
@@ -86,6 +84,7 @@ describe('GCP Logs Tools', () => {
       const result = await listLogsTool.execute({
         filters: ['severity="INFO"'],
         limit: 10,
+        hours: 1,
       });
 
       expect(mockGetEntries).toHaveBeenCalledWith(
@@ -98,18 +97,14 @@ describe('GCP Logs Tools', () => {
       expect(result[0].insertId).toBe('123');
     });
 
-    it('should throw error if date range > 7 days', async () => {
-      const start = new Date('2023-01-01');
-      const end = new Date('2023-01-09');
-
+    it('should throw error if hours > 168', async () => {
       await expect(
         listLogsTool.execute({
           filters: ['test'],
           limit: 100,
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
+          hours: 169,
         }),
-      ).rejects.toThrow('Date range cannot exceed 7 days.');
+      ).rejects.toThrow('Time range cannot exceed 168 hours (7 days).');
     });
   });
 

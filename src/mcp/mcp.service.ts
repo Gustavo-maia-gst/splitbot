@@ -6,6 +6,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { jsonSchemaToZod } from './utils';
 import { MCP_TOOL_TOKEN, McpTool } from './specializations/mcp.tool';
+import z from 'zod';
 
 interface McpServerConfig {
   command: string;
@@ -24,7 +25,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(McpService.name);
   private clients: Map<string, Client> = new Map();
 
-  constructor(@Inject(MCP_TOOL_TOKEN) private readonly extensionTools: McpTool[]) {}
+  constructor(@Inject(MCP_TOOL_TOKEN) private readonly internalTools: McpTool[]) {}
 
   async onModuleInit() {
     await this.connectToServers();
@@ -95,72 +96,91 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
   async getTools(): Promise<Record<string, Tool>> {
     const allTools: Record<string, Tool> = {};
 
-    // Register internal tools
-    for (const extTool of this.extensionTools) {
-      try {
-        allTools[extTool.name] = tool<any, any>({
-          description: extTool.description,
-          inputSchema: extTool.getSchema(),
+    for (const internalTool of this.internalTools) {
+      await this.registerInternalTool(internalTool, allTools);
+    }
+
+    for (const [serverName, client] of this.clients) {
+      await this.registerServerTools(serverName, client, allTools);
+    }
+
+    return allTools;
+  }
+
+  private async registerInternalTool(extTool: McpTool, allTools: Record<string, Tool>) {
+    try {
+      allTools[extTool.name] = tool({
+        description: extTool.description,
+        inputSchema: extTool.getSchema(),
+        execute: async (args) => {
+          this.logger.debug(
+            `Executing internal tool ${extTool.name} with args: ${JSON.stringify(args)}`,
+          );
+          try {
+            const result = await extTool.execute(args);
+            return result;
+          } catch (error) {
+            this.logger.error(`Error executing internal tool ${extTool.name}`, error);
+            throw error;
+          }
+        },
+      });
+
+      const skill = await extTool.skill();
+      if (skill) {
+        allTools[`skill_${extTool.name}`] = tool({
+          description: `Get meaningfull description and a how to use tutorial containing examples of the tool ${extTool.name}`,
+          inputSchema: z.object({}),
+          execute: async () => {
+            return skill;
+          },
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to register internal tool ${extTool.name}`, err);
+    }
+  }
+
+  private async registerServerTools(
+    serverName: string,
+    client: Client,
+    allTools: Record<string, Tool>,
+  ) {
+    try {
+      const { tools } = await client.listTools();
+      const configPath = join(process.cwd(), 'mcp-config.json');
+      const configContent = await readFile(configPath, 'utf-8');
+      const config: McpConfig = JSON.parse(configContent);
+      const serverConfig = config.mcpServers[serverName];
+
+      for (const mcpTool of tools) {
+        if (serverConfig?.disabledTools?.includes(mcpTool.name)) {
+          continue;
+        }
+
+        const toolName = `${serverName}___${mcpTool.name}`;
+
+        allTools[toolName] = tool<any, any>({
+          description: mcpTool.description,
+          inputSchema: jsonSchemaToZod(mcpTool.inputSchema),
           execute: async (args) => {
-            this.logger.debug(
-              `Executing internal tool ${extTool.name} with args: ${JSON.stringify(args)}`,
-            );
+            this.logger.debug(`Executing tool ${toolName} with args: ${JSON.stringify(args)}`);
             try {
-              const result = await extTool.execute(args);
-              this.logger.debug(
-                `Internal tool ${extTool.name} execution result: ${JSON.stringify(result)}`,
-              );
+              const result = await client.callTool({
+                name: mcpTool.name,
+                arguments: args,
+              });
+              this.logger.debug(`Tool ${toolName} execution result: ${JSON.stringify(result)}`);
               return result;
             } catch (error) {
-              this.logger.error(`Error executing internal tool ${extTool.name}`, error);
+              this.logger.error(`Error executing tool ${toolName}`, error);
               throw error;
             }
           },
         });
-      } catch (err) {
-        this.logger.error(`Failed to register internal tool ${extTool.name}`, err);
       }
+    } catch (error) {
+      this.logger.error(`Failed to list tools for server: ${serverName}`, error);
     }
-
-    for (const [serverName, client] of this.clients) {
-      try {
-        const { tools } = await client.listTools();
-        const configPath = join(process.cwd(), 'mcp-config.json');
-        const configContent = await readFile(configPath, 'utf-8');
-        const config: McpConfig = JSON.parse(configContent);
-        const serverConfig = config.mcpServers[serverName];
-
-        for (const mcpTool of tools) {
-          if (serverConfig?.disabledTools?.includes(mcpTool.name)) {
-            continue;
-          }
-
-          const toolName = `${serverName}___${mcpTool.name}`;
-
-          allTools[toolName] = tool<any, any>({
-            description: mcpTool.description,
-            inputSchema: jsonSchemaToZod(mcpTool.inputSchema),
-            execute: async (args) => {
-              this.logger.debug(`Executing tool ${toolName} with args: ${JSON.stringify(args)}`);
-              try {
-                const result = await client.callTool({
-                  name: mcpTool.name,
-                  arguments: args,
-                });
-                this.logger.debug(`Tool ${toolName} execution result: ${JSON.stringify(result)}`);
-                return result;
-              } catch (error) {
-                this.logger.error(`Error executing tool ${toolName}`, error);
-                throw error;
-              }
-            },
-          });
-        }
-      } catch (error) {
-        this.logger.error(`Failed to list tools for server: ${serverName}`, error);
-      }
-    }
-
-    return allTools;
   }
 }

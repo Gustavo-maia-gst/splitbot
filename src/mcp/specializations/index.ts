@@ -5,12 +5,14 @@ import { DetailSqlInstanceTool } from './gcp/database_status/detail_sql_instance
 import { ListRepositoriesTool } from './github/list_repositories/list-repositories.tool';
 import { ListCommitsTool } from './github/list_commits/list-commits.tool';
 import { ListReleasesTool } from './github/list_releases/list-releases.tool';
+import { DetailCommitTool } from './github/detail_commit/detail-commit.tool';
 
 export const TOOLS = [
   ListLogsTool,
   GetLogContextTool,
   ListSqlInstancesTool,
   DetailSqlInstanceTool,
+  DetailCommitTool,
   ListRepositoriesTool,
   ListCommitsTool,
   ListReleasesTool,

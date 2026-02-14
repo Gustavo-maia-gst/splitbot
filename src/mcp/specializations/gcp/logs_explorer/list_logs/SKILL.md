@@ -12,6 +12,10 @@ You can filter logs using the `filters` parameter.
 - `limit` (optional): Maximum number of logs to return. Default is 100.
 - `hours` (optional): Number of hours to look back. Default is 1 hour. Max is 168 hours (7 days).
 
+### Common error patterns
+
+If there are any error involving sql error execution in bigquery, probably there are a sql query logged in a log with msg `execute query - create job - sql` or something similar, you shold look at the nearest log of the error with a message that looks like that and identify the query. If the query that you find is the responsible of the error, add a relevant part of the query that is causing the error together with the context or the whole query if it is small.
+
 ### Examples of searching
 
 #### Search for a specific correlation id

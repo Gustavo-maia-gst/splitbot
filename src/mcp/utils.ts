@@ -5,58 +5,49 @@ export function jsonSchemaToZod(schema: any): z.ZodTypeAny {
     return z.any();
   }
 
-  // enum
-  if (schema.enum) {
-    return z.enum([...schema.enum] as [string, ...string[]]);
+  // Preprocess schema to enforce minLength: 1 for optional strings
+  const preprocessedSchema = preprocessSchema(JSON.parse(JSON.stringify(schema)));
+
+  // Use native Zod conversion
+  return z.fromJSONSchema(preprocessedSchema);
+}
+
+function preprocessSchema(schema: any): any {
+  if (!schema || typeof schema !== 'object') {
+    return schema;
   }
 
-  // const
-  if (schema.const !== undefined) {
-    return z.literal(schema.const);
-  }
+  if (schema.type === 'object' && schema.properties) {
+    const required = Array.isArray(schema.required) ? schema.required : [];
 
-  // oneOf / anyOf
-  if (schema.oneOf || schema.anyOf) {
-    const variants = (schema.oneOf || schema.anyOf).map((s: any) => jsonSchemaToZod(s));
-    return z.union(variants as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
-  }
+    for (const [key, prop] of Object.entries(schema.properties) as [string, any][]) {
+      // Recurse first
+      schema.properties[key] = preprocessSchema(prop);
 
-  // array
-  if (schema.type === 'array') {
-    const itemSchema = schema.items ? jsonSchemaToZod(schema.items) : z.any();
-    return z.array(itemSchema);
-  }
+      const currentProp = schema.properties[key]; // Refetch in case it changed (though preprocess returns mutated or new object)
 
-  // object
-  if (schema.type === 'object') {
-    const shape: Record<string, z.ZodTypeAny> = {};
-    const required: string[] = schema.required ?? [];
-
-    if (schema.properties) {
-      for (const [key, propSchema] of Object.entries(schema.properties)) {
-        let fieldSchema = jsonSchemaToZod(propSchema);
-        if (!required.includes(key)) {
-          fieldSchema = fieldSchema.optional();
+      // If optional and string and no explicit minLength, set minLength: 1
+      if (!required.includes(key)) {
+        if (
+          currentProp.type === 'string' &&
+          !currentProp.enum &&
+          currentProp.const === undefined &&
+          currentProp.minLength === undefined
+        ) {
+          currentProp.minLength = 1;
         }
-        shape[key] = fieldSchema;
       }
     }
-
-    let obj = z.object(shape);
-
-    if (schema.additionalProperties === false) {
-      obj = obj.strict();
-    }
-
-    return obj;
+  } else if (schema.type === 'array' && schema.items) {
+    // Handle array items if they are schemas
+    schema.items = preprocessSchema(schema.items);
+  } else if (schema.oneOf) {
+    schema.oneOf = schema.oneOf.map(preprocessSchema);
+  } else if (schema.anyOf) {
+    schema.anyOf = schema.anyOf.map(preprocessSchema);
+  } else if (schema.allOf) {
+    schema.allOf = schema.allOf.map(preprocessSchema);
   }
 
-  // primitives
-  if (schema.type === 'string') return z.string();
-  if (schema.type === 'number') return z.number();
-  if (schema.type === 'integer') return z.number().int();
-  if (schema.type === 'boolean') return z.boolean();
-  if (schema.type === 'null') return z.null();
-
-  return z.any();
+  return schema;
 }

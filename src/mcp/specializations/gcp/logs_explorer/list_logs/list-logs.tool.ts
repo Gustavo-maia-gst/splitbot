@@ -9,7 +9,7 @@ const ListLogsSchema = z.object({
     .array(z.string())
     .min(1)
     .describe(
-      'Array of filter strings using GCP logging filter syntax, it may be just a string to be searched across logs',
+      ' Arrayof filter strings using GCP logging filter syntax, it may be just a string to be searched across logs',
     ),
 
   limit: z.number().optional().default(100).describe('Max number of logs to return'),

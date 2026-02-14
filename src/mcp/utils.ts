@@ -56,3 +56,24 @@ function allowNullIfDefault(schema: any): any {
 
   return schema;
 }
+
+export function cleanArgs(obj: any): any {
+  if (obj === null || obj === undefined) return undefined;
+
+  if (Array.isArray(obj)) {
+    const arr = obj.map(cleanArgs).filter((v) => v !== undefined);
+    return arr.length > 0 ? arr : undefined;
+  }
+
+  if (typeof obj === 'object') {
+    const entries = Object.entries(obj)
+      .map(([k, v]) => [k, cleanArgs(v)] as const)
+      .filter(([_, v]) => v !== undefined);
+
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  }
+
+  // mantém falsy válidos tipo 0, false, ""
+  return obj;
+}
+kj;

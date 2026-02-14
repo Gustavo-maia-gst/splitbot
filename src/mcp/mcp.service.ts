@@ -4,7 +4,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { Tool, tool } from 'ai';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { jsonSchemaToZod } from './utils';
+import { cleanArgs, jsonSchemaToZod } from './utils';
 import { MCP_TOOL_TOKEN, McpTool } from './specializations/mcp.tool';
 import z from 'zod';
 
@@ -117,7 +117,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
             `Executing internal tool ${extTool.name} with args: ${JSON.stringify(args)}`,
           );
           try {
-            const result = await extTool.execute(args);
+            const result = await extTool.execute(cleanArgs(args));
             return result;
           } catch (error) {
             this.logger.error(`Error executing internal tool ${extTool.name}`, error);
@@ -168,7 +168,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
             try {
               const result = await client.callTool({
                 name: mcpTool.name,
-                arguments: args,
+                arguments: cleanArgs(args),
               });
               this.logger.debug(`Tool ${toolName} execution result: ${JSON.stringify(result)}`);
               return result;

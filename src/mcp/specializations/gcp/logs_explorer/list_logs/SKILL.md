@@ -16,6 +16,13 @@ You can filter logs using the `filters` parameter.
 
 If there are any error involving sql error execution in bigquery, probably there are a sql query logged in a log with msg `execute query - create job - sql` or something similar, you shold look at the nearest log of the error with a message that looks like that and identify the query. If the query that you find is the responsible of the error, add a relevant part of the query that is causing the error together with the context or the whole query if it is small.
 
+
+#### Unrecognized name or column not found
+If the query references a non-existent column, there are two most common scenarios:
+1 - If the query is from a bigquery datasource (it contains select from splitc-customer-warehouse and selects from raw bq tables) and it probably mean that the column was removed from the view or the table that the query is selecting, in this case you should inform that the column was removed and inform the table and dataset.
+
+2 - If the query is from an other datasource, union, procv and etc (it selects from bq_tab_$tabId_$periodId) it is a bug, that should be informed, look if there are any recent commit that may caused a bug removing columns from a table.
+
 ### Examples of searching
 
 #### Search for a specific correlation id

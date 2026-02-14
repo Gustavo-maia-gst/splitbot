@@ -132,6 +132,7 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
           description: `Get meaningfull description and a how to use tutorial containing examples of the tool ${extTool.name}`,
           inputSchema: z.object({}),
           execute: async () => {
+            this.logger.debug(`Getting internal skill ${extTool.name}`);
             return skill;
           },
         });

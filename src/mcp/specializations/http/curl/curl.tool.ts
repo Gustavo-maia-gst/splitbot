@@ -37,9 +37,11 @@ export class CurlTool extends McpTool<z.infer<typeof CurlSchema>> {
     try {
       const response = await fetch(url, {
         method,
-        headers: {
-          'x-api-key': apiKey,
-        },
+        headers: apiKey
+          ? {
+              'x-api-key': apiKey,
+            }
+          : undefined,
         body: method !== 'GET' && method !== 'HEAD' ? body : undefined,
       });
 

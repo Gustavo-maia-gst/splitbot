@@ -9,7 +9,8 @@ const CurlSchema = z.object({
     .optional()
     .default('GET')
     .describe('The HTTP method to use'),
-  headers: z.object().optional().describe('HTTP headers to include in the request'),
+
+  apiKey: z.string().optional().describe('The API key to use'),
 
   body: z.string().optional().describe('The body of the request'),
 });
@@ -29,14 +30,16 @@ export class CurlTool extends McpTool<z.infer<typeof CurlSchema>> {
   }
 
   async execute(params: z.infer<typeof CurlSchema>) {
-    const { url, method, headers, body } = params;
+    const { url, method, apiKey, body } = params;
 
     this.logger.log(`Executing HTTP ${method} request to ${url}`);
 
     try {
       const response = await fetch(url, {
         method,
-        headers: headers as HeadersInit,
+        headers: {
+          'x-api-key': apiKey,
+        },
         body: method !== 'GET' && method !== 'HEAD' ? body : undefined,
       });
 

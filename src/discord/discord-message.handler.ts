@@ -12,10 +12,22 @@ export class DiscordMessageHandler {
     // Ignore messages from bots (unless it's self, but we usually ignore self in trigger, but here we process history)
     if (message.author.bot) return;
 
-    // Check if bot was mentioned
+    // Check if bot was mentioned (user or role)
     const botMentioned = message.mentions.has(clientUser.id);
+    const roleMentioned = message.mentions.roles.some((role) =>
+      message.guild?.members.me?.roles.cache.has(role.id),
+    );
+    const isReplyToBot =
+      message.reference?.messageId && (await message.fetchReference()).author.id === clientUser.id;
+    const isDM = message.channel.isDMBased();
 
-    if (botMentioned || message.content.toLowerCase().includes('splitc')) {
+    if (
+      isDM ||
+      botMentioned ||
+      roleMentioned ||
+      isReplyToBot ||
+      message.content.toLowerCase().includes('splitc')
+    ) {
       this.logger.log(
         `📨 Received message from ${message.author.tag} in #${message.channel.isDMBased() ? 'DM' : (message.channel as any).name}`,
       );

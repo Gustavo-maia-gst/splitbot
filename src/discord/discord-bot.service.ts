@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Message, Partials } from 'discord.js';
 import { ConfigService } from '@config/config.service';
 import { DiscordMessageHandler } from './discord-message.handler';
 
@@ -17,7 +17,9 @@ export class DiscordBotService implements OnModuleInit {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages,
       ],
+      partials: [Partials.Channel],
     });
 
     this.setupEventHandlers();

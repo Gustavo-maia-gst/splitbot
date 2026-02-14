@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Message } from 'discord.js';
 import { LlmService } from '../llm/llm.service';
+import { splitMessage } from '../common/utils/string.utils';
 
 @Injectable()
 export class DiscordMessageHandler {
@@ -82,7 +83,11 @@ export class DiscordMessageHandler {
     try {
       const response = await this.llmService.generateResponse(sortedMessages);
       clearInterval(typingInterval);
-      await message.reply(response);
+
+      const chunks = splitMessage(response);
+      for (const chunk of chunks) {
+        await message.reply(chunk);
+      }
     } catch (error) {
       clearInterval(typingInterval);
       throw error;

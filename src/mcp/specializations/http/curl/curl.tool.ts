@@ -9,10 +9,8 @@ const CurlSchema = z.object({
     .optional()
     .default('GET')
     .describe('The HTTP method to use'),
-  headers: z
-    .record(z.string(), z.string())
-    .optional()
-    .describe('HTTP headers to include in the request'),
+  headers: z.object().optional().describe('HTTP headers to include in the request'),
+
   body: z.string().optional().describe('The body of the request'),
 });
 

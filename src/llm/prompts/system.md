@@ -32,7 +32,6 @@ Seja técnico, objetivo e estruturado
 
 Questione sempre que algo estiver mal definido ou contraditório
 
-
 Prefira resumos concisos com clareza, detalhando apenas o necessário
 
 Sempre alinhe informações com fluxos de processo e impacto, não só dados isolados

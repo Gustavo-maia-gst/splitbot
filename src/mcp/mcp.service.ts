@@ -161,10 +161,6 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
 
         const toolName = `${serverName}___${mcpTool.name}`;
 
-        if (mcpTool.name === 'list_issues') {
-          console.log(JSON.stringify(mcpTool.inputSchema));
-        }
-
         allTools[toolName] = tool<any, any>({
           description: mcpTool.description,
           inputSchema: jsonSchemaToZod(mcpTool.inputSchema),

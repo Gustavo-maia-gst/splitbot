@@ -28,7 +28,7 @@ export class LlmService {
       const { text } = await generateText({
         model: openai('gpt-5.1-codex-max'),
         messages: conversation,
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(15),
         tools,
       });
 

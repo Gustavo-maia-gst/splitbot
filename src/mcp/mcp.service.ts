@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { Tool, tool } from 'ai';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { jsonSchemaToZod } from './utils';
+import { MCP_TOOL_TOKEN, McpTool } from './specializations/mcp.tool';
 
 interface McpServerConfig {
   command: string;
@@ -22,6 +23,8 @@ interface McpConfig {
 export class McpService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(McpService.name);
   private clients: Map<string, Client> = new Map();
+
+  constructor(@Inject(MCP_TOOL_TOKEN) private readonly extensionTools: McpTool[]) {}
 
   async onModuleInit() {
     await this.connectToServers();
@@ -91,6 +94,33 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
 
   async getTools(): Promise<Record<string, Tool>> {
     const allTools: Record<string, Tool> = {};
+
+    // Register internal tools
+    for (const extTool of this.extensionTools) {
+      try {
+        allTools[extTool.name] = tool<any, any>({
+          description: extTool.description,
+          inputSchema: extTool.getSchema(),
+          execute: async (args) => {
+            this.logger.debug(
+              `Executing internal tool ${extTool.name} with args: ${JSON.stringify(args)}`,
+            );
+            try {
+              const result = await extTool.execute(args);
+              this.logger.debug(
+                `Internal tool ${extTool.name} execution result: ${JSON.stringify(result)}`,
+              );
+              return result;
+            } catch (error) {
+              this.logger.error(`Error executing internal tool ${extTool.name}`, error);
+              throw error;
+            }
+          },
+        });
+      } catch (err) {
+        this.logger.error(`Failed to register internal tool ${extTool.name}`, err);
+      }
+    }
 
     for (const [serverName, client] of this.clients) {
       try {

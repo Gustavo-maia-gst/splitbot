@@ -31,7 +31,7 @@ export class GoogleService implements OnModuleInit {
 
       this.logger.log('GCP Logging client initialized successfully.');
     } catch (err) {
-      this.logger.error('Failed to initialize GCP Logging client', err);
+      this.logger.error('Failed to initialize GCP client', err);
     }
   }
 

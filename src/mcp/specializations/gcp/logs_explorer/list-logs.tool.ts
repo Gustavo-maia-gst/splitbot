@@ -7,7 +7,9 @@ const ListLogsSchema = z.object({
   filters: z
     .array(z.string())
     .min(1)
-    .describe('Array of filter strings using GCP logging filter syntax'),
+    .describe(
+      'Array of filter strings using GCP logging filter syntax, it may be just a string to be searched across logs',
+    ),
   limit: z.number().optional().default(100).describe('Max number of logs to return'),
   start_time: z.iso.datetime().optional().describe('ISO 8601 start timestamp'),
   end_time: z.iso.datetime().optional().describe('ISO 8601 end timestamp'),
@@ -38,7 +40,7 @@ export class ListLogsTool implements McpTool<z.infer<typeof ListLogsSchema>> {
       throw new Error('Date range cannot exceed 7 days.');
     }
 
-    this.logger.log(`Listing logs with filters: ${filters.join(', ')}`);
+    this.logger.log(`Listing logs with filters: ${filters.join('\n')}`);
 
     return this.googleService.listLogs(filters, start, end, limit);
   }

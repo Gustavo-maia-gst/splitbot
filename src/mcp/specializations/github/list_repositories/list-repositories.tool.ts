@@ -4,7 +4,7 @@ import { Octokit } from 'octokit';
 import { Endpoints } from '@octokit/types';
 
 export class ListRepositoriesTool extends McpTool {
-  name = 'list_repositories';
+  name = 'github___list_repositories';
   description = 'List repositories in the splitc-com-br organization';
 
   getSchema() {

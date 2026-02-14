@@ -4,7 +4,7 @@ import { Octokit } from 'octokit';
 import { Endpoints } from '@octokit/types';
 
 export class ListCommitsTool extends McpTool {
-  name = 'list_commits';
+  name = 'github___list_commits';
   description =
     'List commits for a repository, filtering out commits by fluxbot. Returns a summary including changed files for the latest commits.';
 

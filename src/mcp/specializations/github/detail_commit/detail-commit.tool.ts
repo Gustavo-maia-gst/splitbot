@@ -4,7 +4,7 @@ import { Octokit } from 'octokit';
 import { Endpoints } from '@octokit/types';
 
 export class DetailCommitTool extends McpTool {
-  name = 'detail_commit';
+  name = 'github___detail_commit';
   description = 'Get detailed information about a specific commit, including file diffs.';
 
   getSchema() {

@@ -4,7 +4,7 @@ import { Octokit } from 'octokit';
 import { Endpoints } from '@octokit/types';
 
 export class ListReleasesTool extends McpTool {
-  name = 'list_releases';
+  name = 'github___list_releases';
   description =
     'List the last 10 releases/tags for a repository, including associated commits since the previous release.';
 

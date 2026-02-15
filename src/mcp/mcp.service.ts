@@ -1,12 +1,10 @@
 import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { Tool, tool } from 'ai';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { cleanArgs, jsonSchemaToZod } from './utils';
 import { MCP_TOOL_TOKEN, McpTool } from './specializations/mcp.tool';
-import z from 'zod';
+import { ExternalMcpTool } from './specializations/external-mcp.tool';
 
 interface McpServerConfig {
   command: string;
@@ -14,6 +12,7 @@ interface McpServerConfig {
   env?: Record<string, string>;
   disabledTools?: string[];
   disabled?: boolean;
+  tags?: string[];
 }
 
 interface McpConfig {
@@ -24,11 +23,13 @@ interface McpConfig {
 export class McpService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(McpService.name);
   private clients: Map<string, Client> = new Map();
+  private allTools: Record<string, McpTool> = {};
 
   constructor(@Inject(MCP_TOOL_TOKEN) private readonly internalTools: McpTool[]) {}
 
   async onModuleInit() {
     await this.connectToServers();
+    await this.registerTools();
   }
 
   async onApplicationShutdown() {
@@ -93,95 +94,68 @@ export class McpService implements OnModuleInit, OnApplicationShutdown {
     this.clients.clear();
   }
 
-  async getTools(): Promise<Record<string, Tool>> {
-    const allTools: Record<string, Tool> = {};
+  private async registerTools(): Promise<void> {
+    const allTools: Record<string, McpTool> = {};
 
+    // Register internal tools
     for (const internalTool of this.internalTools) {
-      await this.registerInternalTool(internalTool, allTools);
+      allTools[internalTool.name] = internalTool;
     }
 
-    for (const [serverName, client] of this.clients) {
-      await this.registerServerTools(serverName, client, allTools);
-    }
-
-    return allTools;
-  }
-
-  private async registerInternalTool(extTool: McpTool, allTools: Record<string, Tool>) {
+    // Register external tools via config
     try {
-      allTools[extTool.name] = tool({
-        description: extTool.description,
-        inputSchema: extTool.getSchema(),
-        execute: async (args) => {
-          this.logger.debug(
-            `Executing internal tool ${extTool.name} with args: ${JSON.stringify(args)}`,
-          );
-          try {
-            const result = await extTool.execute(cleanArgs(args));
-            return result;
-          } catch (error) {
-            this.logger.error(`Error executing internal tool ${extTool.name}`, error);
-            throw error;
-          }
-        },
-      });
-
-      const skill = await extTool.skill();
-      if (skill) {
-        allTools[`skill_${extTool.name}`] = tool({
-          description: `Get meaningfull description and a how to use tutorial containing examples of the tool ${extTool.name}`,
-          inputSchema: z.object({}),
-          execute: async () => {
-            this.logger.debug(`Getting internal skill ${extTool.name}`);
-            return skill;
-          },
-        });
-      }
-    } catch (err) {
-      this.logger.error(`Failed to register internal tool ${extTool.name}`, err);
-    }
-  }
-
-  private async registerServerTools(
-    serverName: string,
-    client: Client,
-    allTools: Record<string, Tool>,
-  ) {
-    try {
-      const { tools } = await client.listTools();
       const configPath = join(process.cwd(), 'mcp-config.json');
       const configContent = await readFile(configPath, 'utf-8');
       const config: McpConfig = JSON.parse(configContent);
-      const serverConfig = config.mcpServers[serverName];
 
-      for (const mcpTool of tools) {
-        if (serverConfig?.disabledTools?.includes(mcpTool.name)) {
+      for (const [serverName, client] of this.clients) {
+        const serverConfig = config.mcpServers[serverName];
+        try {
+          const { tools } = await client.listTools();
+          for (const tool of tools) {
+            if (serverConfig?.disabledTools?.includes(tool.name)) {
+              continue;
+            }
+            const externalTool = new ExternalMcpTool(
+              serverName,
+              tool.name,
+              tool.description || '',
+              tool.inputSchema,
+              client,
+              serverConfig?.tags,
+            );
+            allTools[externalTool.name] = externalTool;
+          }
+        } catch (err) {
+          this.logger.error(`Failed to list tools for server ${serverName}`, err);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Failed to load mcp-config.json for tool registration`, err);
+    }
+
+    this.allTools = allTools;
+  }
+
+  public async getToolDefinitions(tags?: string[]): Promise<any[]> {
+    const definitions: any[] = [];
+
+    for (const tool of Object.values(this.allTools)) {
+      if (tags && tags.length > 0) {
+        const toolTags = tool.tags || [];
+        const hasMatchingTag = tags.some((tag) => toolTags.includes(tag));
+        if (!hasMatchingTag) {
           continue;
         }
-
-        const toolName = `${serverName}___${mcpTool.name}`;
-
-        allTools[toolName] = tool<any, any>({
-          description: mcpTool.description,
-          inputSchema: jsonSchemaToZod(mcpTool.inputSchema),
-          execute: async (args) => {
-            this.logger.debug(`Executing tool ${toolName} with args: ${JSON.stringify(args)}`);
-            try {
-              const result = await client.callTool({
-                name: mcpTool.name,
-                arguments: cleanArgs(args),
-              });
-              this.logger.debug(`Tool ${toolName} execution result: ${JSON.stringify(result)}`);
-              return result;
-            } catch (error) {
-              this.logger.error(`Error executing tool ${toolName}`, error);
-              throw error;
-            }
-          },
-        });
       }
-    } catch (error) {
-      this.logger.error(`Failed to list tools for server: ${serverName}`, error);
+
+      definitions.push({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.getJsonSchema(),
+      });
     }
+
+    return definitions;
   }
 }
